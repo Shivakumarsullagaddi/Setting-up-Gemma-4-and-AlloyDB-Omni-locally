@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1500T Forging Press | Air-Gapped AI Telemetry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 md:px-8 py-3.5 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="bg-sky-600/20 border border-sky-500/30 p-2.5 rounded-xl text-sky-400">
+                    <i class="fa-solid fa-industry text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        1500T Forging Press
+                        <span class="text-[11px] font-mono font-normal text-sky-400 px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800/60">Air-Gapped Telemetry</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Edge Industrial Predictive Maintenance with AlloyDB Omni & Gemma 4</p>
+                </div>
+            </div>
+
+            <div class="flex items-center flex-wrap gap-2.5">
+                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/80">
+                    <span class="pulse-dot bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-mono text-slate-300">AlloyDB Omni :5433</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/80">
+                    <span class="pulse-dot bg-sky-400 animate-pulse"></span>
+                    <span class="text-xs font-mono text-slate-300">Gemma 4 :8080</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/80">
+                    <i class="fa-solid fa-satellite-dish text-emerald-400 text-xs"></i>
+                    <span class="text-xs font-mono text-slate-300">1 Hz Stream</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Container -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6 flex-1">
+
+        <!-- Top Operations & Sensor Telemetry Row -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- Controls Card -->
+            <div class="card-panel p-4 flex flex-col justify-between gap-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Operations Control</span>
+                    <div id="badge-machine-state" class="badge-pill badge-success">
+                        <span class="pulse-dot bg-emerald-400 animate-pulse"></span> Nominal Operation
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-mode-normal" onclick="setMode('normal')" class="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow-md transition-all">
+                        <i class="fa-solid fa-check-circle mr-1"></i> Normal
+                    </button>
+                    <button id="btn-mode-anomaly" onclick="setMode('anomaly')" class="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all border border-slate-700">
+                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Simulate Failure
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1 border-t border-slate-800">
+                    <button id="btn-analyze-now" onclick="forceAnalyze()" class="flex-1 py-1.5 px-2 bg-sky-900/40 hover:bg-sky-800/50 text-sky-300 rounded border border-sky-700/50 text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-bolt"></i> Analyze Now
+                    </button>
+                    <button onclick="resetTelemetry()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-xs font-semibold transition-all" title="Reset Telemetry to Baseline">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pressure KPI Card -->
+            <div id="card-pressure" class="card-panel p-4 flex flex-col justify-between transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-gauge-high"></i> Hydraulic Pressure
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700">Nominal 280 bar</span>
+                </div>
+                <div class="my-2">
+                    <span id="val-pressure" class="text-3xl font-extrabold font-mono text-white">280.0</span>
+                    <span class="text-sm font-semibold text-slate-400 ml-1">bar</span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                    <span>Threshold Limit:</span>
+                    <span class="text-sky-300 font-semibold">&lt; 255.0 bar</span>
+                </div>
+            </div>
+
+            <!-- Temperature KPI Card -->
+            <div id="card-temp" class="card-panel p-4 flex flex-col justify-between transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-temperature-half"></i> Main Cylinder Temp
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700">Nominal 42 °C</span>
+                </div>
+                <div class="my-2">
+                    <span id="val-temp" class="text-3xl font-extrabold font-mono text-white">42.0</span>
+                    <span class="text-sm font-semibold text-slate-400 ml-1">°C</span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                    <span>Threshold Limit:</span>
+                    <span class="text-amber-300 font-semibold">&gt; 60.0 °C</span>
+                </div>
+            </div>
+
+            <!-- Vibration KPI Card -->
+            <div id="card-vib" class="card-panel p-4 flex flex-col justify-between transition-all duration-300">
+                <div class="flex justify-between items-start">
+                    <span class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-wave-square"></i> Z-Axis Vibration
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700">Nominal 1.8 mm/s</span>
+                </div>
+                <div class="my-2">
+                    <span id="val-vib" class="text-3xl font-extrabold font-mono text-white">1.80</span>
+                    <span class="text-sm font-semibold text-slate-400 ml-1">mm/s</span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 flex justify-between">
+                    <span>Threshold Limit:</span>
+                    <span class="text-rose-300 font-semibold">&gt; 4.5 mm/s</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Dynamic Execution Timeline & Cooldown Section -->
+        <section class="card-panel p-4 flex flex-col gap-3">
+            <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-diagram-project text-sky-400"></i>
+                    <h2 class="text-xs font-bold text-slate-200 uppercase tracking-wider">AI Execution Timeline</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">Engine Status:</span>
+                    <span id="cooldown-indicator" class="badge-pill badge-neutral font-mono">Ready</span>
+                </div>
+            </div>
+
+            <!-- Skip Reason / Cooldown Banner -->
+            <div id="skip-status-banner" class="flex items-center justify-between p-3 rounded-lg border border-slate-800 bg-slate-900/60 text-xs">
+                <div id="skip-reason-text" class="flex items-center text-slate-300 break-words-anywhere">
+                    <i class="fa-solid fa-circle-check text-emerald-400 mr-2"></i>
+                    <span>Nominal operation; real-time telemetry streaming smoothly.</span>
+                </div>
+                <span class="text-[11px] font-mono text-slate-400 ml-2 shrink-0">Poll: 1s</span>
+            </div>
+
+            <!-- 5-Stage Visual Timeline Steps -->
+            <div id="execution-timeline-steps" class="flex flex-wrap lg:flex-nowrap gap-3 pt-1">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </section>
+
+        <!-- Main Workspace: Chart on Left, Full Trace & History on Right -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left Column: Live Chart & Event Log (lg:col-span-6) -->
+            <div class="lg:col-span-6 flex flex-col gap-6">
+
+                <!-- Live Sensor Stream Chart -->
+                <div class="card-panel p-5 flex flex-col min-h-[380px]">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-sky-400"></i>
+                            <h2 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Live Sensor Stream</h2>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-mono text-slate-400">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> Pressure</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> Temp</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span> Vibration</span>
+                        </div>
+                    </div>
+                    <div class="relative w-full flex-1 min-h-[300px]">
+                        <canvas id="telemetryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Event History List -->
+                <div class="card-panel p-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-sky-400"></i>
+                            <h2 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Recent AI Analysis Events</h2>
+                        </div>
+                        <span class="text-[11px] font-mono text-slate-400">Click to Inspect</span>
+                    </div>
+                    <div id="events-history-list" class="max-h-[260px] overflow-y-auto flex flex-col gap-2 pr-1">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Transparent AI Execution Trace (lg:col-span-6) -->
+            <div class="lg:col-span-6 flex flex-col gap-6">
+
+                <div class="card-panel p-5 flex flex-col gap-5">
+                    
+                    <!-- Trace Header -->
+                    <div class="flex flex-wrap justify-between items-center border-b border-slate-800 pb-3 gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-1.5 rounded-lg bg-sky-950/60 border border-sky-800/60 text-sky-400">
+                                <i class="fa-solid fa-microchip"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-bold text-white uppercase tracking-wider">AI Execution Trace</h2>
+                                <p class="text-[11px] text-slate-400">Comprehensive multi-stage inspection</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="trace-event-id" class="text-xs font-mono font-bold text-sky-400">Awaiting Event</span>
+                            <span id="trace-timestamp" class="text-xs font-mono text-slate-400">--:--:--</span>
+                            <span id="trace-status" class="badge-pill badge-neutral">Idle</span>
+                        </div>
+                    </div>
+
+                    <!-- Stage A: Sensor Simulation & Trigger Diagnostic -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-blue-600/30 text-blue-400 font-bold text-xs flex items-center justify-center font-mono">A</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Sensor Simulation & Detection</span>
+                            </div>
+                            <span class="text-[11px] font-mono text-slate-400">Stage A</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                                <span class="text-[10px] text-slate-400 uppercase block">Pressure</span>
+                                <span id="trace-snap-pressure" class="text-sm font-bold font-mono text-sky-400">--</span>
+                            </div>
+                            <div class="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                                <span class="text-[10px] text-slate-400 uppercase block">Temperature</span>
+                                <span id="trace-snap-temp" class="text-sm font-bold font-mono text-amber-400">--</span>
+                            </div>
+                            <div class="p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                                <span class="text-[10px] text-slate-400 uppercase block">Vibration Z</span>
+                                <span id="trace-snap-vib" class="text-sm font-bold font-mono text-rose-400">--</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-1.5 text-xs font-mono bg-slate-950/40 p-2.5 rounded-lg border border-slate-800/60">
+                            <div class="flex justify-between text-slate-400">
+                                <span>Machine Mode:</span>
+                                <span id="trace-snap-mode" class="font-bold text-emerald-400">NORMAL</span>
+                            </div>
+                            <div class="text-slate-400 pt-1 border-t border-slate-800/60">
+                                <span class="text-slate-500 block mb-1">Threshold Diagnostic:</span>
+                                <div id="trace-trigger-reason" class="text-slate-300 break-words-anywhere">
+                                    Awaiting anomaly or manual trigger event...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage B: AlloyDB Omni In-Database Execution -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-emerald-600/30 text-emerald-400 font-bold text-xs flex items-center justify-center font-mono">B</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-200">AlloyDB Omni In-Database ML</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="trace-alloy-status" class="badge-pill badge-neutral">Pending</span>
+                                <span id="trace-alloy-duration" class="text-xs font-mono text-slate-400">--</span>
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-slate-400 font-mono flex flex-col gap-1">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Target Host:</span>
+                                <span id="trace-alloy-target" class="text-slate-300">AlloyDB Omni @ 127.0.0.1:5433</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Operation:</span>
+                                <span class="text-emerald-400">SELECT google_ml.predict_row(...)</span>
+                            </div>
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-900/40 text-[11px] text-emerald-300 font-mono leading-relaxed">
+                            <i class="fa-solid fa-shield-halved mr-1 text-emerald-400"></i>
+                            <span id="trace-alloy-role">AlloyDB Omni natively executes ML inference in-database via google_ml.predict_row without exposing telemetry over external networks.</span>
+                        </div>
+
+                        <!-- Executed SQL Code Block -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[11px] font-mono text-slate-400 uppercase">Executed SQL Statement:</span>
+                                <button onclick="copyToClipboard('trace-alloy-sql', this)" class="copy-btn text-[11px] text-slate-400 hover:text-sky-300 flex items-center gap-1 font-mono">
+                                    <i class="fa-regular fa-copy"></i> Copy SQL
+                                </button>
+                            </div>
+                            <pre class="code-container p-3 font-mono text-xs text-emerald-300 break-words-anywhere whitespace-pre-wrap"><code id="trace-alloy-sql">-- Awaiting execution --</code></pre>
+                            <div id="trace-alloy-error" class="hidden mt-2 p-2 rounded bg-rose-950/50 border border-rose-900 text-rose-300 text-xs font-mono break-words-anywhere"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage C: Gemma 4 Model Inference -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-3">
+                        <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-sky-600/30 text-sky-400 font-bold text-xs flex items-center justify-center font-mono">C</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-200">Gemma 4 Local Inference</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="trace-gemma-status" class="badge-pill badge-neutral">Pending</span>
+                                <span id="trace-gemma-duration" class="text-xs font-mono text-slate-400">--</span>
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-slate-400 font-mono flex flex-col gap-1">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Model ID:</span>
+                                <span class="text-sky-300 font-semibold">gemma4:e2b</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Generation Token Count:</span>
+                                <span id="trace-gemma-tokens" class="text-slate-300">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Prompt Card -->
+                        <div>
+                            <span class="text-[11px] font-mono text-slate-400 uppercase block mb-1">Exact Injected Prompt:</span>
+                            <div id="trace-gemma-prompt" class="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-mono text-sky-200 break-words-anywhere leading-relaxed">
+                                -- Awaiting Prompt --
+                            </div>
+                        </div>
+
+                        <!-- Request Payload JSON -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[11px] font-mono text-slate-400 uppercase">Ollama Request Payload:</span>
+                                <button onclick="copyToClipboard('trace-gemma-request', this)" class="copy-btn text-[11px] text-slate-400 hover:text-sky-300 flex items-center gap-1 font-mono">
+                                    <i class="fa-regular fa-copy"></i> Copy JSON
+                                </button>
+                            </div>
+                            <pre class="code-container p-3 font-mono text-xs text-slate-300 break-words-anywhere whitespace-pre-wrap"><code id="trace-gemma-request">{}</code></pre>
+                        </div>
+
+                        <!-- Raw Ollama Response Details -->
+                        <details class="group">
+                            <summary class="cursor-pointer text-[11px] font-mono text-slate-400 hover:text-slate-200 flex items-center justify-between py-1">
+                                <span><i class="fa-solid fa-chevron-right group-open:rotate-90 transition-transform mr-1 text-[9px]"></i> View Raw Gemma/Ollama Response JSON</span>
+                                <span class="text-[10px] text-slate-500">Full Metadata</span>
+                            </summary>
+                            <pre class="code-container p-3 mt-2 font-mono text-[11px] text-slate-400 break-words-anywhere whitespace-pre-wrap"><code id="trace-gemma-raw-response">{}</code></pre>
+                        </details>
+
+                        <div id="trace-gemma-error" class="hidden p-2 rounded bg-rose-950/50 border border-rose-900 text-rose-300 text-xs font-mono break-words-anywhere"></div>
+                    </div>
+
+                    <!-- Stage D: Final Result & Root Cause Synthesis -->
+                    <div id="trace-final-card" class="rounded-xl border border-sky-800/80 bg-slate-900/60 p-4 flex flex-col gap-3 transition-all">
+                        <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-amber-600/30 text-amber-400 font-bold text-xs flex items-center justify-center font-mono">D</span>
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-100">Final Diagnostic Synthesis</h3>
+                            </div>
+                            <span class="badge-pill badge-info"><i class="fa-solid fa-brain text-[10px]"></i> AI Analysis</span>
+                        </div>
+
+                        <!-- Tri-fold comparison grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 flex items-center gap-1">
+                                    <i class="fa-solid fa-database text-sky-400"></i> 1. Raw Telemetry Snapshot
+                                </span>
+                                <div id="trace-final-raw" class="flex flex-col gap-0.5">
+                                    <span class="text-xs font-mono text-slate-500">Awaiting snapshot...</span>
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-lg bg-slate-950/70 border border-slate-800">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1 flex items-center gap-1">
+                                    <i class="fa-solid fa-filter text-amber-400"></i> 2. Threshold Rule Check
+                                </span>
+                                <div id="trace-final-threshold" class="flex flex-col gap-1">
+                                    <span class="text-xs font-mono text-slate-500">Awaiting rule check...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LLM Synthesis Card -->
+                        <div class="p-4 rounded-lg bg-sky-950/30 border border-sky-800/50 flex flex-col gap-2">
+                            <span class="text-[10px] uppercase font-bold text-sky-300 flex items-center gap-1">
+                                <i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> 3. Gemma 4 Root Cause Explanation
+                            </span>
+                            <div id="trace-final-explanation" class="text-slate-100 text-sm font-semibold leading-relaxed break-words-anywhere min-h-[40px] flex items-center">
+                                Telemetry within nominal operational bounds. Ready for anomaly simulation.
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] text-slate-500 font-mono flex items-center justify-between pt-1">
+                            <span><i class="fa-solid fa-lock text-[9px] mr-1"></i> Air-gapped pipeline integrity verified</span>
+                            <span>No fabricated outputs</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="border-t border-slate-800/80 bg-slate-950 px-4 md:px-8 py-3 text-center text-xs text-slate-500 font-mono">
+        Air-Gapped Industrial Telemetry &middot; Gemma 4 Local + AlloyDB Omni &middot; Port 5000
+    </footer>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
